@@ -42,6 +42,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,6 +57,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.example.calculatorproto.ui.theme.CalculatorProtoTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -65,6 +68,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        cameraManager = getSystemService("camera") as CameraManager
 
         setContent {
             CalculatorProtoTheme {
@@ -99,6 +104,7 @@ class MainActivity : ComponentActivity() {
                             when (configuration.orientation) {
                                 Configuration.ORIENTATION_LANDSCAPE -> {
                                     Row (modifier = Modifier.fillMaxWidth()) {
+
                                         Screen(
                                             viewModel.getStringExpression(),
                                             "= " + viewModel.getEvaluated(),
@@ -112,6 +118,20 @@ class MainActivity : ComponentActivity() {
                                 }
                                 else -> {
                                     Column(modifier = Modifier.fillMaxWidth()) {
+                                        val coroutineScope = rememberCoroutineScope()
+                                        if (viewModel.getEvaluated() == "Error") {
+                                            LaunchedEffect(coroutineScope) {
+                                                val cameraID = cameraManager.cameraIdList[0]
+                                                delay(100)
+                                                cameraManager.setTorchMode(cameraID, true)
+                                                delay(100)
+                                                cameraManager.setTorchMode(cameraID, false)
+                                                delay(100)
+                                                cameraManager.setTorchMode(cameraID, true)
+                                                delay(100)
+                                                cameraManager.setTorchMode(cameraID, false)
+                                            }
+                                        }
                                         Screen(
                                             viewModel.getStringExpression(),
                                             "= " + viewModel.getEvaluated(),
@@ -379,17 +399,4 @@ fun Screen(text: String, lowerText: String, modifier: Modifier = Modifier) {
             )
         }
     }
-}
-
-private suspend fun openFlashLight() {
-    val cameraManager = CameraManager()
-    val cameraId = cameraManager.cameraIdList[0]
-        try {
-            cameraManager.setTorchMode(cameraId, true)
-            delay(300)
-            cameraManager.setTorchMode(cameraId, false)
-        } catch (e: CameraAccessException) {
-
-        }
-
 }

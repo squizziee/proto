@@ -64,17 +64,29 @@ class CalculatorViewModel: ViewModel() {
             CalculatorToken.BACKSPACE ->
                 clearLastSymbolOfExpression()
 
-            CalculatorToken.ADD ->
+            CalculatorToken.ADD -> {
                 addOperator(token.symbol)
+                return
+            }
 
-            CalculatorToken.MULTIPLY ->
-                addOperator(token.symbol)
 
-            CalculatorToken.SUBTRACT ->
+            CalculatorToken.MULTIPLY -> {
                 addOperator(token.symbol)
+                return
+            }
 
-            CalculatorToken.DIVIDE ->
+
+            CalculatorToken.SUBTRACT -> {
                 addOperator(token.symbol)
+                return
+            }
+
+
+            CalculatorToken.DIVIDE -> {
+                addOperator(token.symbol)
+                return
+            }
+
 
             CalculatorToken.FRACTION ->
                 addFraction()
