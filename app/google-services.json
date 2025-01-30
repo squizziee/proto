@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "674925400345",
+    "firebase_url": "https://proto-calculator-default-rtdb.firebaseio.com",
+    "project_id": "proto-calculator",
+    "storage_bucket": "proto-calculator.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:674925400345:android:b7c774800b9166f29f3588",
+        "android_client_info": {
+          "package_name": "com.example.calculatorproto"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUG-V3AEnR05dM10Di40UqkWzUcDXo7dY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -4,12 +4,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import java.util.Stack
 
 class CalculatorViewModel: ViewModel() {
 
     private var currentExpression by mutableStateOf("0")
     private var currentResult by mutableStateOf("0")
+    private var firestoreAccessor = FirestoreAccessor()
+    private lateinit var uid: String
 
     private var supportedOperators = hashMapOf(
         CalculatorToken.ADD.symbol to Operator (symbol = CalculatorToken.ADD.symbol, 0),
@@ -17,6 +22,10 @@ class CalculatorViewModel: ViewModel() {
         CalculatorToken.MULTIPLY.symbol to Operator (symbol = CalculatorToken.MULTIPLY.symbol, 5),
         CalculatorToken.DIVIDE.symbol to Operator (symbol = CalculatorToken.DIVIDE.symbol, 5),
     )
+
+    fun setUid(uid: String) {
+        this.uid = uid
+    }
 
     fun getStringExpression() : String {
         return currentExpression.replace(" ", "")
@@ -58,8 +67,14 @@ class CalculatorViewModel: ViewModel() {
             CalculatorToken.ZERO ->
                 addDigit(token.symbol)
 
-            CalculatorToken.CLEAR ->
+            CalculatorToken.CLEAR -> {
+                viewModelScope.launch {
+                    firestoreAccessor
+                        .addHistoryEntry(uid, currentExpression)
+                }
                 clearExpression()
+            }
+
 
             CalculatorToken.BACKSPACE ->
                 clearLastSymbolOfExpression()
@@ -93,6 +108,11 @@ class CalculatorViewModel: ViewModel() {
 
             CalculatorToken.EQUALS ->
                 {
+                    viewModelScope.launch {
+                        firestoreAccessor
+                            .addHistoryEntry(uid, currentExpression)
+                    }
+
                     if (currentResult != "Error")
                         currentExpression = currentResult
                 }

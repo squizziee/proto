@@ -1,9 +1,11 @@
 package com.example.calculatorproto
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraManager
+import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -11,6 +13,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
@@ -58,22 +62,53 @@ import androidx.compose.ui.unit.sp
 import com.example.calculatorproto.ui.theme.CalculatorProtoTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
 
     private val viewModel by viewModels<CalculatorViewModel>();
     private lateinit var cameraManager: CameraManager
+    private val PREFS_NAME = "historyPreferences"
+    private var notificationService = NotificationService()
 
+    @RequiresApi(Build.VERSION_CODES.S)
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissions(arrayOf(
+                android.Manifest.permission.POST_NOTIFICATIONS,
+                android.Manifest.permission.SCHEDULE_EXACT_ALARM,
+                android.Manifest.permission.USE_EXACT_ALARM),
+                1)
+        }
+
+        notificationService.scheduleNotification(applicationContext, 10)
+        notificationService.scheduleNotification(applicationContext, 60)
+        notificationService.scheduleNotification(applicationContext, 300)
+        notificationService.scheduleNotification(applicationContext, 15000)
+        notificationService.scheduleNotification(applicationContext, 86400)
 
         cameraManager = getSystemService("camera") as CameraManager
 
         setContent {
             CalculatorProtoTheme {
                 val configuration = LocalConfiguration.current
+                val settings = applicationContext.getSharedPreferences(PREFS_NAME, 0)
+                var uid = settings.getString("firestoreDeviceId", null);
+
+                if (uid == null) {
+                    val editor = settings.edit()
+
+                    editor.putString("firestoreDeviceId", UUID.randomUUID().toString())
+
+                    editor.apply()
+
+                    uid = settings.getString("firestoreDeviceId", null)
+                }
+                viewModel.setUid(uid!!)
 
                 Scaffold (
                     topBar = {
@@ -84,8 +119,11 @@ class MainActivity : ComponentActivity() {
                             else -> {
                                 TopAppBar(title= { Text("Proto", fontSize = 22.sp, fontWeight = FontWeight.Bold)},
                                     actions={
-                                        IconButton({ }) {Icon(Icons.Filled.Info, contentDescription = "About")}
-                                        IconButton({ }) {Icon(Icons.Filled.DateRange, contentDescription = "History")}
+                                        IconButton({ }) {Icon(Icons.Filled.Settings, contentDescription = "Settings")}
+                                        IconButton(onClick = {
+                                            val intent = Intent(this@MainActivity, HistoryActivity::class.java)
+                                            startActivity(intent)
+                                        }) {Icon(Icons.Filled.DateRange, contentDescription = "History")}
                                     })
                             }
                         }
@@ -98,13 +136,25 @@ class MainActivity : ComponentActivity() {
                         Surface(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color.White)
                                 .padding(innerPadding)
                         ) {
                             when (configuration.orientation) {
                                 Configuration.ORIENTATION_LANDSCAPE -> {
                                     Row (modifier = Modifier.fillMaxWidth()) {
-
+                                        val coroutineScope = rememberCoroutineScope()
+                                        if (viewModel.getEvaluated() == "Error") {
+                                            LaunchedEffect(coroutineScope) {
+                                                val cameraID = cameraManager.cameraIdList[0]
+                                                delay(100)
+                                                cameraManager.setTorchMode(cameraID, true)
+                                                delay(100)
+                                                cameraManager.setTorchMode(cameraID, false)
+                                                delay(100)
+                                                cameraManager.setTorchMode(cameraID, true)
+                                                delay(100)
+                                                cameraManager.setTorchMode(cameraID, false)
+                                            }
+                                        }
                                         Screen(
                                             viewModel.getStringExpression(),
                                             "= " + viewModel.getEvaluated(),
