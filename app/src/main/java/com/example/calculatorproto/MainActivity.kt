@@ -21,6 +21,7 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -212,118 +213,106 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable
-fun RegisterScheduledReceiver() {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    // Create an instance of the receiver
-    val receiver = remember { NotificationReceiver() }
-
-    // Define the intent filter for the receiver
-    val intentFilter = remember {
-        IntentFilter()
-    }
-
-    // Register and unregister the receiver based on the lifecycle
-    DisposableEffect(lifecycleOwner) {
-        val lifecycleObserver = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_START) {
-                // Register the receiver when the activity starts
-                ContextCompat.registerReceiver(
-                    context,
-                    receiver,
-                    intentFilter,
-                    ContextCompat.RECEIVER_NOT_EXPORTED
-                )
-            } else if (event == Lifecycle.Event.ON_STOP) {
-                // Unregister the receiver when the activity stops
-                context.unregisterReceiver(receiver)
-            }
-        }
-
-        // Add the observer to the lifecycle
-        lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
-
-        // Clean up when the composable is removed from the composition
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
-        }
-    }
-}
-
+@RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun ButtonGridBasic(viewModel: CalculatorViewModel, modifier: Modifier = Modifier) {
+
+    val buttonTokens = listOf(
+        listOf(
+            CalculatorToken.CLEAR,
+            CalculatorToken.BACKSPACE,
+            CalculatorToken.OPEN_PARENTHESES,
+            CalculatorToken.CLOSE_PARENTHESES,
+            CalculatorToken.SQRT),
+        listOf(
+            CalculatorToken.SEVEN,
+            CalculatorToken.EIGHT,
+            CalculatorToken.NINE,
+            CalculatorToken.MULTIPLY,
+            CalculatorToken.SIN),
+        listOf(
+            CalculatorToken.FOUR,
+            CalculatorToken.FIVE,
+            CalculatorToken.SIX,
+            CalculatorToken.SUBTRACT,
+            CalculatorToken.COS),
+        listOf(
+            CalculatorToken.ONE,
+            CalculatorToken.TWO,
+            CalculatorToken.THREE,
+            CalculatorToken.ADD,
+            CalculatorToken.TAN),
+        listOf(
+            CalculatorToken.FRACTION,
+            CalculatorToken.ZERO,
+            CalculatorToken.EQUALS,
+            CalculatorToken.DIVIDE,
+            CalculatorToken.COT)
+    )
+
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.SpaceAround
     ) {
-        Row (
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            CalcButton(viewModel, CalculatorToken.CLEAR,
-                customFontColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            DoubleCalcButton(viewModel, CalculatorToken.BACKSPACE,
-                customFontColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            CalcButton(viewModel, CalculatorToken.DIVIDE,
-                customFontColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
+        buttonTokens.forEach { buttonTokenRow ->
+            Row (
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                buttonTokenRow.forEach { buttonToken ->
+                    when (buttonToken) {
+                        CalculatorToken.CLEAR,
+                        CalculatorToken.OPEN_PARENTHESES,
+                        CalculatorToken.CLOSE_PARENTHESES,
+                        CalculatorToken.BACKSPACE,
+                        CalculatorToken.SUBTRACT,
+                        CalculatorToken.DIVIDE,
+                        CalculatorToken.MULTIPLY,
+                        CalculatorToken.ADD -> {
+                            CalcButton(
+                                viewModel,
+                                buttonToken,
+                                customFontColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        CalculatorToken.SQRT,
+                        CalculatorToken.SIN,
+                        CalculatorToken.COS,
+                        CalculatorToken.TAN,
+                        CalculatorToken.COT -> {
+                            CalcButton(
+                                viewModel,
+                                buttonToken,
+                                customBackgroundColor = MaterialTheme.colorScheme.onSecondary,
+                                customFontColor = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        CalculatorToken.EQUALS -> {
+                            CalcButton(
+                                viewModel,
+                                buttonToken,
+                                customBackgroundColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                customFontColor = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        else -> {
+                            CalcButton(
+                                viewModel,
+                                buttonToken,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
 
-        Row (
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            CalcButton(viewModel, CalculatorToken.SEVEN)
-            CalcButton(viewModel, CalculatorToken.EIGHT)
-            CalcButton(viewModel, CalculatorToken.NINE)
-            CalcButton(viewModel, CalculatorToken.MULTIPLY,
-                customFontColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-
-        Row (
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            CalcButton(viewModel, CalculatorToken.FOUR)
-            CalcButton(viewModel, CalculatorToken.FIVE)
-            CalcButton(viewModel, CalculatorToken.SIX)
-            CalcButton(viewModel, CalculatorToken.SUBTRACT,
-                customFontColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-
-        Row (
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            CalcButton(viewModel, CalculatorToken.ONE)
-            CalcButton(viewModel, CalculatorToken.TWO)
-            CalcButton(viewModel, CalculatorToken.THREE)
-            CalcButton(
-                viewModel, CalculatorToken.ADD,
-                customFontColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-        }
-
-        Row (
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            CalcButton(viewModel, CalculatorToken.FRACTION)
-            CalcButton(viewModel, CalculatorToken.ZERO)
-            DoubleCalcButton(viewModel, CalculatorToken.EQUALS,
-                customBackgroundColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                customFontColor = MaterialTheme.colorScheme.primaryContainer
-            )
+                }
+            }
         }
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun CalcButton(
     viewModel: CalculatorViewModel,
@@ -353,15 +342,13 @@ fun CalcButton(
                     disabledContainerColor = customBackgroundColor,
                     disabledContentColor = customFontColor,
                 ),
-                modifier = Modifier
+                modifier = modifier
                     .width(100.dp)
                     .height(70.dp)
                     .padding(4.dp),
-//            .shadow(5.dp, RoundedCornerShape(20.dp)),
                 shape = RoundedCornerShape(20.dp)
             ){
-
-                Text(token.symbol, fontSize = 24.sp)
+                Text(token.displaySymbol, fontSize = 20.sp)
             }
         }
         else -> {
@@ -374,92 +361,24 @@ fun CalcButton(
                     vibrator.cancel()
                     vibrator.vibrate(vibrationEffect1)
                 },
+                contentPadding = PaddingValues(
+                    all = 0.dp
+                ),
                 colors = ButtonColors(
                     containerColor = customBackgroundColor,
                     contentColor = customFontColor,
                     disabledContainerColor = customBackgroundColor,
                     disabledContentColor = customFontColor,
                 ),
-                modifier = Modifier
-                    .size(100.dp)
+                modifier = modifier
+                    .height(80.dp)
                     .padding(4.dp),
+
 //            .shadow(5.dp, RoundedCornerShape(20.dp)),
                 shape = RoundedCornerShape(20.dp)
             ){
 
-                Text(token.symbol, fontSize = 24.sp)
-            }
-        }
-    }
-
-}
-
-@Composable
-fun DoubleCalcButton(
-    viewModel: CalculatorViewModel,
-    token: CalculatorToken,
-    modifier: Modifier = Modifier,
-    customFontColor: Color = MaterialTheme.colorScheme.onPrimary,
-    customBackgroundColor: Color = MaterialTheme.colorScheme.primary,
-) {
-    val configuration = LocalConfiguration.current
-    val context = LocalContext.current
-    val vibrator = context.getSystemService("vibrator") as Vibrator
-
-    when (configuration.orientation) {
-        Configuration.ORIENTATION_LANDSCAPE -> {
-            Button(
-                onClick = {
-                    viewModel.updateExpression(token)
-                    val vibrationEffect1 =
-                        VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
-
-                    vibrator.cancel()
-                    vibrator.vibrate(vibrationEffect1)
-                },
-
-                colors = ButtonColors(
-                    containerColor = customBackgroundColor,
-                    contentColor = customFontColor,
-                    disabledContainerColor = customBackgroundColor,
-                    disabledContentColor = customFontColor,
-                ),
-                modifier = Modifier
-                    .width(200.dp)
-                    .height(70.dp)
-                    .padding(4.dp),
-//            .shadow(5.dp, RoundedCornerShape(20.dp)),
-                shape = RoundedCornerShape(20.dp)
-            ){
-
-                Text(token.symbol, fontSize = 24.sp)
-            }
-        }
-        else -> {
-            Button(
-                onClick = {
-                    viewModel.updateExpression(token)
-                    val vibrationEffect1 =
-                        VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
-
-                    vibrator.cancel()
-                    vibrator.vibrate(vibrationEffect1)
-                },
-                colors = ButtonColors(
-                    containerColor = customBackgroundColor,
-                    contentColor = customFontColor,
-                    disabledContainerColor = customBackgroundColor,
-                    disabledContentColor = customFontColor,
-                ),
-                modifier = Modifier
-                    .height(100.dp)
-                    .width(200.dp)
-                    .padding(4.dp),
-//            .shadow(5.dp, RoundedCornerShape(20.dp)),
-                shape = RoundedCornerShape(20.dp)
-            ){
-
-                Text(token.symbol, fontSize = 24.sp)
+                Text(token.displaySymbol, fontSize = 20.sp)
             }
         }
     }
@@ -476,7 +395,7 @@ fun Screen(text: String, lowerText: String, modifier: Modifier = Modifier) {
         ) {
             Text(
                 text,
-                fontSize = 60.sp,
+                fontSize = 50.sp,
                 textAlign = TextAlign.Right,
                 maxLines = 100,
                 modifier = Modifier
@@ -486,7 +405,7 @@ fun Screen(text: String, lowerText: String, modifier: Modifier = Modifier) {
                     .wrapContentHeight(align = Alignment.Bottom),
                 style = LocalTextStyle.current.merge(
                     TextStyle(
-                        lineHeight = 0.85.em
+                        lineHeight = 1.25.em
                     )
                 )
             )

@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.calculatorproto"
-        minSdk = 29
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -43,6 +43,8 @@ android {
 dependencies {
 
     implementation(libs.play.services.base)
+    implementation("androidx.compose.runtime:runtime-livedata:1.7.5")
+    implementation("org.mozilla:rhino:1.7.14")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation (libs.androidx.core.splashscreen)

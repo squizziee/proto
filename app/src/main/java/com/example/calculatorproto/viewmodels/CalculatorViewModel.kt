@@ -8,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.calculatorproto.misc.CalculatorToken
 import com.example.calculatorproto.misc.FirestoreAccessor
 import kotlinx.coroutines.launch
-import java.util.Stack
 
 class CalculatorViewModel: ViewModel() {
 
@@ -17,13 +16,6 @@ class CalculatorViewModel: ViewModel() {
     private var firestoreAccessor = FirestoreAccessor()
     private var isCurrentExpressionSaved = false
     private lateinit var uid: String
-
-    private var supportedOperators = hashMapOf(
-        CalculatorToken.ADD.symbol to Operator (symbol = CalculatorToken.ADD.symbol, 0),
-        CalculatorToken.SUBTRACT.symbol to Operator (symbol = CalculatorToken.SUBTRACT.symbol, 0),
-        CalculatorToken.MULTIPLY.symbol to Operator (symbol = CalculatorToken.MULTIPLY.symbol, 5),
-        CalculatorToken.DIVIDE.symbol to Operator (symbol = CalculatorToken.DIVIDE.symbol, 5),
-    )
 
     fun setUid(uid: String) {
         this.uid = uid
@@ -48,9 +40,16 @@ class CalculatorViewModel: ViewModel() {
             CalculatorToken.SEVEN,
             CalculatorToken.EIGHT,
             CalculatorToken.NINE,
+            CalculatorToken.SIN,
+            CalculatorToken.COS,
+            CalculatorToken.TAN,
+            CalculatorToken.COT,
+            CalculatorToken.SQRT,
+            CalculatorToken.OPEN_PARENTHESES,
+            CalculatorToken.CLOSE_PARENTHESES,
             CalculatorToken.ZERO -> {
                 isCurrentExpressionSaved = false
-                addDigit(token.symbol)
+                addDigit(token.displaySymbol)
             }
 
             CalculatorToken.CLEAR -> {
@@ -67,27 +66,13 @@ class CalculatorViewModel: ViewModel() {
             CalculatorToken.BACKSPACE ->
                 clearLastSymbolOfExpression()
 
+            CalculatorToken.MULTIPLY,
+            CalculatorToken.SUBTRACT,
+            CalculatorToken.DIVIDE,
             CalculatorToken.ADD -> {
-                addOperator(token.symbol)
+                addDigit(token.displaySymbol)
                 return
             }
-
-            CalculatorToken.MULTIPLY -> {
-                addOperator(token.symbol)
-                return
-            }
-
-            CalculatorToken.SUBTRACT -> {
-                addOperator(token.symbol)
-                return
-            }
-
-
-            CalculatorToken.DIVIDE -> {
-                addOperator(token.symbol)
-                return
-            }
-
 
             CalculatorToken.FRACTION ->
                 addFraction()
@@ -102,9 +87,10 @@ class CalculatorViewModel: ViewModel() {
                         }
                     }
 
-
-                    if (currentResult != "Error")
+                    if (currentResult != "Error") {
                         currentExpression = currentResult
+                    }
+
                 }
         }
 
@@ -121,7 +107,6 @@ class CalculatorViewModel: ViewModel() {
         } else {
             currentExpression += symbol
         }
-
     }
 
     private fun addFraction() {
@@ -133,27 +118,13 @@ class CalculatorViewModel: ViewModel() {
         }
     }
 
-    private fun addOperator(symbol: String) {
-        val trimmed = currentExpression.replace(" ", "")
-
-        if (trimmed.length < 2) {
-            currentExpression += " $symbol ";
-            return;
-        }
-
-        if (supportedOperators.containsKey(currentExpression[currentExpression.length - 2].toString())) {
-            currentExpression = currentExpression.dropLast(3);
-        }
-        currentExpression += " $symbol ";
-    }
-
     private fun clearExpression() {
         currentExpression = "0"
     }
 
     private fun clearLastSymbolOfExpression() {
         currentExpression = if (currentExpression.last() == ' ')  {
-            currentExpression.dropLast(3)
+            currentExpression.dropLast(1)
         } else {
             currentExpression.dropLast(1)
         }
@@ -163,69 +134,40 @@ class CalculatorViewModel: ViewModel() {
         }
     }
 
+    private fun prepareForEvaluation(raw: String): String {
+        return raw
+            .replace("sin", "Math.sin")
+            .replace("cos", "Math.cos")
+            .replace("tan", "Math.tan")
+            .replace("cot", "Math.cot")
+            .replace("sqrt", "Math.sqrt")
+            .replace(CalculatorToken.SUBTRACT.displaySymbol, CalculatorToken.SUBTRACT.symbol)
+            .replace(CalculatorToken.MULTIPLY.displaySymbol, CalculatorToken.MULTIPLY.symbol)
+            .replace(CalculatorToken.DIVIDE.displaySymbol, CalculatorToken.DIVIDE.symbol)
+    }
+
     private fun evaluateExpression() {
-        val rpn = convertInfixToRPN(currentExpression);
-        val stack = Stack<Double>();
+        val context = org.mozilla.javascript.Context.enter()
+        context.optimizationLevel = -1
+        val scope = context.initStandardObjects()
 
-        for (token in rpn) {
-            if (!stack.isEmpty() && supportedOperators.containsKey(token)) {
-                val right = stack.pop()
-                val left = stack.pop()
-                var result = 0.0
+        val prepared = prepareForEvaluation(currentExpression)
 
-                when (token) {
-                    CalculatorToken.ADD.symbol ->
-                        result = left + right
-                    CalculatorToken.SUBTRACT.symbol ->
-                        result = left - right
-                    CalculatorToken.MULTIPLY.symbol ->
-                        result = left * right
-                    CalculatorToken.DIVIDE.symbol ->
-                        result = left / right
-                }
+        currentResult = try {
 
-                stack.push(result);
-            }
-            else {
-                stack.push(token.toDouble())
-            }
-        }
+            val tmp = context
+                .evaluateString(scope, prepared, "JavaScript", 1, null)
 
-        currentResult = stack.pop().toString()
-    }
-
-    private fun convertInfixToRPN(infix: String): MutableList<String> {
-        val tokens = infix.split(" ");
-        val result = mutableListOf<String>()
-        val stack = Stack<String>()
-
-        for (token in tokens) {
-            if (supportedOperators.containsKey(token)) {
-                while (!stack.isEmpty() && supportedOperators.containsKey(stack.peek())) {
-                    val cOp = supportedOperators[token]
-                    val lOp = supportedOperators[stack.peek()]
-                    if (cOp!!.precedence <= lOp!!.precedence)
-                    {
-                        result.add(stack.pop())
-                        continue
-                    }
-                    break
-                }
-                stack.push(token)
+            if (tmp is Double) {
+                tmp.toString()
             } else {
-                result.add(token)
+                "Error"
             }
 
+        } catch (_: Exception) {
+            "Error"
+        } finally {
+            org.mozilla.javascript.Context.exit()
         }
-
-        while (!stack.isEmpty()) {
-            result.add(stack.pop());
-        }
-
-        return result;
     }
-}
-
-class Operator(var symbol: String, var precedence: Int) {
-
 }
