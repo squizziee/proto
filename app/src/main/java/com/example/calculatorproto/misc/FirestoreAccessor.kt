@@ -1,4 +1,4 @@
-package com.example.calculatorproto
+package com.example.calculatorproto.misc
 
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.DocumentReference
@@ -7,7 +7,6 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.tasks.await
 import java.time.Instant
-import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 class FirestoreAccessor {

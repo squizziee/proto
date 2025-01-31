@@ -1,7 +1,9 @@
-package com.example.calculatorproto
+package com.example.calculatorproto.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.calculatorproto.misc.FirestoreAccessor
+import com.example.calculatorproto.misc.History
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch

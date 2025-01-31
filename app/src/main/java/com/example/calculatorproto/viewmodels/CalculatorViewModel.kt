@@ -1,11 +1,12 @@
-package com.example.calculatorproto
+package com.example.calculatorproto.viewmodels
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.CoroutineScope
+import com.example.calculatorproto.misc.CalculatorToken
+import com.example.calculatorproto.misc.FirestoreAccessor
 import kotlinx.coroutines.launch
 import java.util.Stack
 
@@ -14,6 +15,7 @@ class CalculatorViewModel: ViewModel() {
     private var currentExpression by mutableStateOf("0")
     private var currentResult by mutableStateOf("0")
     private var firestoreAccessor = FirestoreAccessor()
+    private var isCurrentExpressionSaved = false
     private lateinit var uid: String
 
     private var supportedOperators = hashMapOf(
@@ -37,44 +39,30 @@ class CalculatorViewModel: ViewModel() {
 
     fun updateExpression(token: CalculatorToken) {
         when (token) {
-            CalculatorToken.ONE ->
+            CalculatorToken.ONE,
+            CalculatorToken.TWO,
+            CalculatorToken.THREE,
+            CalculatorToken.FOUR,
+            CalculatorToken.FIVE,
+            CalculatorToken.SIX,
+            CalculatorToken.SEVEN,
+            CalculatorToken.EIGHT,
+            CalculatorToken.NINE,
+            CalculatorToken.ZERO -> {
+                isCurrentExpressionSaved = false
                 addDigit(token.symbol)
-
-            CalculatorToken.TWO ->
-                addDigit(token.symbol)
-
-            CalculatorToken.THREE ->
-                addDigit(token.symbol)
-
-            CalculatorToken.FOUR ->
-                addDigit(token.symbol)
-
-            CalculatorToken.FIVE ->
-                addDigit(token.symbol)
-
-            CalculatorToken.SIX ->
-                addDigit(token.symbol)
-
-            CalculatorToken.SEVEN ->
-                addDigit(token.symbol)
-
-            CalculatorToken.EIGHT ->
-                addDigit(token.symbol)
-
-            CalculatorToken.NINE ->
-                addDigit(token.symbol)
-
-            CalculatorToken.ZERO ->
-                addDigit(token.symbol)
+            }
 
             CalculatorToken.CLEAR -> {
-                viewModelScope.launch {
-                    firestoreAccessor
-                        .addHistoryEntry(uid, currentExpression)
+                if (!isCurrentExpressionSaved) {
+                    viewModelScope.launch {
+                        firestoreAccessor
+                            .addHistoryEntry(uid, currentExpression)
+                        isCurrentExpressionSaved = true
+                    }
                 }
                 clearExpression()
             }
-
 
             CalculatorToken.BACKSPACE ->
                 clearLastSymbolOfExpression()
@@ -84,12 +72,10 @@ class CalculatorViewModel: ViewModel() {
                 return
             }
 
-
             CalculatorToken.MULTIPLY -> {
                 addOperator(token.symbol)
                 return
             }
-
 
             CalculatorToken.SUBTRACT -> {
                 addOperator(token.symbol)
@@ -108,10 +94,14 @@ class CalculatorViewModel: ViewModel() {
 
             CalculatorToken.EQUALS ->
                 {
-                    viewModelScope.launch {
-                        firestoreAccessor
-                            .addHistoryEntry(uid, currentExpression)
+                    if (!isCurrentExpressionSaved) {
+                        viewModelScope.launch {
+                            firestoreAccessor
+                                .addHistoryEntry(uid, currentExpression)
+                            isCurrentExpressionSaved = true
+                        }
                     }
+
 
                     if (currentResult != "Error")
                         currentExpression = currentResult

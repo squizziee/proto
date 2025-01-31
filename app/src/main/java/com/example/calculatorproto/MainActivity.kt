@@ -1,20 +1,24 @@
 package com.example.calculatorproto
 
-import android.content.Context
 import android.content.Intent
+import androidx.activity.compose.setContent
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import android.content.IntentFilter
 import android.content.res.Configuration
-import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraManager
 import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,7 +35,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
@@ -52,16 +55,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import com.example.calculatorproto.misc.CalculatorToken
+import com.example.calculatorproto.viewmodels.CalculatorViewModel
+import com.example.calculatorproto.misc.NotificationReceiver
+import com.example.calculatorproto.services.NotificationService
 import com.example.calculatorproto.ui.theme.CalculatorProtoTheme
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.util.UUID
 
 class MainActivity : ComponentActivity() {
@@ -69,7 +75,6 @@ class MainActivity : ComponentActivity() {
     private val viewModel by viewModels<CalculatorViewModel>();
     private lateinit var cameraManager: CameraManager
     private val PREFS_NAME = "historyPreferences"
-    private var notificationService = NotificationService()
 
     @RequiresApi(Build.VERSION_CODES.S)
     @OptIn(ExperimentalMaterial3Api::class)
@@ -85,16 +90,14 @@ class MainActivity : ComponentActivity() {
                 1)
         }
 
-        notificationService.scheduleNotification(applicationContext, 10)
-        notificationService.scheduleNotification(applicationContext, 60)
-        notificationService.scheduleNotification(applicationContext, 300)
-        notificationService.scheduleNotification(applicationContext, 15000)
-        notificationService.scheduleNotification(applicationContext, 86400)
+        val notificationService = NotificationService()
 
         cameraManager = getSystemService("camera") as CameraManager
 
         setContent {
             CalculatorProtoTheme {
+                notificationService.scheduleNotificationSet(applicationContext)
+
                 val configuration = LocalConfiguration.current
                 val settings = applicationContext.getSharedPreferences(PREFS_NAME, 0)
                 var uid = settings.getString("firestoreDeviceId", null);
@@ -133,11 +136,13 @@ class MainActivity : ComponentActivity() {
                         BottomAppBar (modifier = Modifier.height(20.dp)) {  }
                     },
                     content = { innerPadding ->
+
                         Surface(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(innerPadding)
                         ) {
+
                             when (configuration.orientation) {
                                 Configuration.ORIENTATION_LANDSCAPE -> {
                                     Row (modifier = Modifier.fillMaxWidth()) {
@@ -205,6 +210,46 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
+fun RegisterScheduledReceiver() {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Create an instance of the receiver
+    val receiver = remember { NotificationReceiver() }
+
+    // Define the intent filter for the receiver
+    val intentFilter = remember {
+        IntentFilter()
+    }
+
+    // Register and unregister the receiver based on the lifecycle
+    DisposableEffect(lifecycleOwner) {
+        val lifecycleObserver = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) {
+                // Register the receiver when the activity starts
+                ContextCompat.registerReceiver(
+                    context,
+                    receiver,
+                    intentFilter,
+                    ContextCompat.RECEIVER_NOT_EXPORTED
+                )
+            } else if (event == Lifecycle.Event.ON_STOP) {
+                // Unregister the receiver when the activity stops
+                context.unregisterReceiver(receiver)
+            }
+        }
+
+        // Add the observer to the lifecycle
+        lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
+
+        // Clean up when the composable is removed from the composition
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
+        }
+    }
+}
+
+@Composable
 fun ButtonGridBasic(viewModel: CalculatorViewModel, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
@@ -256,7 +301,8 @@ fun ButtonGridBasic(viewModel: CalculatorViewModel, modifier: Modifier = Modifie
             CalcButton(viewModel, CalculatorToken.ONE)
             CalcButton(viewModel, CalculatorToken.TWO)
             CalcButton(viewModel, CalculatorToken.THREE)
-            CalcButton(viewModel, CalculatorToken.ADD,
+            CalcButton(
+                viewModel, CalculatorToken.ADD,
                 customFontColor = MaterialTheme.colorScheme.onPrimaryContainer,
             )
         }
@@ -277,11 +323,11 @@ fun ButtonGridBasic(viewModel: CalculatorViewModel, modifier: Modifier = Modifie
 
 @Composable
 fun CalcButton(
-        viewModel: CalculatorViewModel,
-        token: CalculatorToken,
-        modifier: Modifier = Modifier,
-        customFontColor: Color = MaterialTheme.colorScheme.onPrimary,
-        customBackgroundColor: Color = MaterialTheme.colorScheme.primary,
+    viewModel: CalculatorViewModel,
+    token: CalculatorToken,
+    modifier: Modifier = Modifier,
+    customFontColor: Color = MaterialTheme.colorScheme.onPrimary,
+    customBackgroundColor: Color = MaterialTheme.colorScheme.primary,
     ) {
     val configuration = LocalConfiguration.current
     val context = LocalContext.current

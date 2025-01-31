@@ -1,4 +1,4 @@
-package com.example.calculatorproto
+package com.example.calculatorproto.misc
 
 enum class CalculatorToken(val symbol: String) {
     ONE("1"),
