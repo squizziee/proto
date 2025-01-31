@@ -100,6 +100,47 @@ class FirestoreAccessor {
         return deviceDoc
     }
 
+    suspend fun addCustomTheme(uid: String, theme: CustomThemeData) {
+        val deviceDoc = getDeviceDoc(uid)
+        var themeRef = deviceDoc!!.get("theme") as DocumentReference
+
+        if (themeRef.get().await().exists()) {
+            themeRef.delete().await()
+        }
+
+        database
+            .collection("themes")
+            .add({
+                hashMapOf(
+                    "buttonTextColor" to theme.buttonTextColor,
+                    "inputTextColor" to theme.inputTextColor,
+                    "statusBarColor" to theme.statusBarColor
+                )
+            }).addOnSuccessListener { ref ->
+                themeRef = ref
+            }
+            .await()
+
+        database
+            .collection("devices")
+            .document(deviceDoc.id)
+            .update(
+                hashMapOf(
+                    "theme" to themeRef
+                ) as Map<String, Any>
+
+            )
+            .await()
+    }
+
+}
+
+data class CustomThemeData (
+    var buttonTextColor: String? = null,
+    var inputTextColor: String? = null,
+    var statusBarColor: String? = null,
+    ) {
+
 }
 
 data class History (var entries: List<HistoryEntry>? = null) {

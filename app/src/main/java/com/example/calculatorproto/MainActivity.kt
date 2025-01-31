@@ -122,7 +122,10 @@ class MainActivity : ComponentActivity() {
                             else -> {
                                 TopAppBar(title= { Text("Proto", fontSize = 22.sp, fontWeight = FontWeight.Bold)},
                                     actions={
-                                        IconButton({ }) {Icon(Icons.Filled.Settings, contentDescription = "Settings")}
+                                        IconButton(onClick = {
+                                            val intent = Intent(this@MainActivity, SettingsActivity::class.java)
+                                            startActivity(intent)
+                                        }) {Icon(Icons.Filled.Settings, contentDescription = "Settings")}
                                         IconButton(onClick = {
                                             val intent = Intent(this@MainActivity, HistoryActivity::class.java)
                                             startActivity(intent)
