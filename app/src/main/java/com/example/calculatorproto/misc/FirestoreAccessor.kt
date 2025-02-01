@@ -1,5 +1,6 @@
 package com.example.calculatorproto.misc
 
+import androidx.compose.ui.graphics.Color
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
@@ -104,49 +105,75 @@ class FirestoreAccessor {
         val deviceDoc = getDeviceDoc(uid)
         var themeRef = deviceDoc!!.get("theme") as DocumentReference
 
-        if (themeRef.get().await().exists()) {
-            themeRef.delete().await()
-        }
-
-        database
-            .collection("themes")
-            .add({
-                hashMapOf(
-                    "buttonTextColor" to theme.buttonTextColor,
-                    "inputTextColor" to theme.inputTextColor,
-                    "statusBarColor" to theme.statusBarColor
-                )
-            }).addOnSuccessListener { ref ->
-                themeRef = ref
+        try {
+            if (themeRef.get().await().exists()) {
+                themeRef.delete().await()
             }
-            .await()
+        } finally {
+            database
+                .collection("themes")
+                .add(
+                    hashMapOf(
+                        "primary" to theme.primary,
+                        "onPrimary" to theme.onPrimary,
+                        "primaryContainer" to theme.primaryContainer,
+                        "onPrimaryContainer" to theme.onPrimaryContainer,
+                        "secondary" to theme.secondary,
+                        "onSecondary" to theme.onSecondary,
+                        "surface" to theme.surface
+                    )
+                ).addOnSuccessListener { ref ->
+                    themeRef = ref
+                }
+                .await()
 
-        database
-            .collection("devices")
-            .document(deviceDoc.id)
-            .update(
-                hashMapOf(
-                    "theme" to themeRef
-                ) as Map<String, Any>
+            database
+                .collection("devices")
+                .document(deviceDoc.id)
+                .update(
+                    hashMapOf(
+                        "theme" to themeRef
+                    ) as Map<String, Any>
 
-            )
-            .await()
+                )
+                .await()
+        }
     }
 
+    suspend fun getCustomTheme(uid: String) : CustomThemeData? {
+        val deviceDoc = getDeviceDoc(uid)
+        val themeRef = deviceDoc!!.get("theme") as DocumentReference?
+            ?: return null
+
+        return themeRef.get().await().toObject(CustomThemeData::class.java)
+    }
 }
 
 data class CustomThemeData (
-    var buttonTextColor: String? = null,
-    var inputTextColor: String? = null,
-    var statusBarColor: String? = null,
-    ) {
+    var primary: Int? = null,
+    var onPrimary: Int? = null,
+    var primaryContainer: Int? = null,
+    var onPrimaryContainer: Int? = null,
+    var secondary: Int? = null,
+    var onSecondary: Int? = null,
+    var surface: Int? = null,
+)
 
-}
+data class CustomTheme (
+    var primary: Color? = null,
+    var onPrimary: Color? = null,
+    var primaryContainer: Color? = null,
+    var onPrimaryContainer: Color? = null,
+    var secondary: Color? = null,
+    var onSecondary: Color? = null,
+    var surface: Color? = null,
+)
 
-data class History (var entries: List<HistoryEntry>? = null) {
+data class History (
+    var entries: List<HistoryEntry>? = null
+)
 
-}
-
-data class HistoryEntry (var operation: String? = null, var date: String? = null) {
-
-}
+data class HistoryEntry (
+    var operation: String? = null,
+    var date: String? = null
+)

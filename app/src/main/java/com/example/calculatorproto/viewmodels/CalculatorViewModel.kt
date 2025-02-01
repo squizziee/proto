@@ -22,11 +22,15 @@ class CalculatorViewModel: ViewModel() {
     }
 
     fun getStringExpression() : String {
-        return currentExpression.replace(" ", "")
+        return currentExpression
     }
 
     fun getEvaluated() : String {
-        return if (currentResult == "Infinity") "∞" else currentResult
+        return when (currentResult) {
+            "Infinity" -> "∞"
+            "NaN" -> "Error"
+            else -> currentResult
+        }
     }
 
     fun updateExpression(token: CalculatorToken) {
@@ -123,11 +127,7 @@ class CalculatorViewModel: ViewModel() {
     }
 
     private fun clearLastSymbolOfExpression() {
-        currentExpression = if (currentExpression.last() == ' ')  {
-            currentExpression.dropLast(1)
-        } else {
-            currentExpression.dropLast(1)
-        }
+        currentExpression = currentExpression.dropLast(1)
 
         if (currentExpression.isEmpty()) {
             currentExpression = "0"
@@ -139,7 +139,7 @@ class CalculatorViewModel: ViewModel() {
             .replace("sin", "Math.sin")
             .replace("cos", "Math.cos")
             .replace("tan", "Math.tan")
-            .replace("cot", "Math.cot")
+            .replace("cot", "cot")
             .replace("sqrt", "Math.sqrt")
             .replace(CalculatorToken.SUBTRACT.displaySymbol, CalculatorToken.SUBTRACT.symbol)
             .replace(CalculatorToken.MULTIPLY.displaySymbol, CalculatorToken.MULTIPLY.symbol)
@@ -153,10 +153,16 @@ class CalculatorViewModel: ViewModel() {
 
         val prepared = prepareForEvaluation(currentExpression)
 
+        val cotFunc =
+            "function cot(x) {" +
+            "   return 1/Math.tan(x);" +
+            "}"
+
+
         currentResult = try {
 
             val tmp = context
-                .evaluateString(scope, prepared, "JavaScript", 1, null)
+                .evaluateString(scope, cotFunc + prepared, "JavaScript", 1, null)
 
             if (tmp is Double) {
                 tmp.toString()
